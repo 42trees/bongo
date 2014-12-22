@@ -1,0 +1,34 @@
+{{define "content"}}
+<h1>New Post</h1>
+
+
+<form action="/new" method="post">
+
+  <ul>
+  
+  <li>
+    <input type="text" name="title"/>
+    <label for="title">Title</label>
+  </li>
+
+  <li>
+    <textarea name="content"></textarea>
+  </li>
+ 
+  <li>
+  <input type="submit" value="Save">
+  </li>
+ 
+
+
+
+
+
+
+  </ul>
+
+
+</form>
+
+{{end}}
+
