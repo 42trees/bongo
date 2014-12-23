@@ -1,6 +1,6 @@
 ---
 slug: hello-world
-title: LOL title
+title: LOL title again
 ---
 
 # Hello world! 
