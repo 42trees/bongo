@@ -30,46 +30,22 @@ func main() {
 
   flag.Parse()
 
-//  flag.PrintDefaults()
+  //  flag.PrintDefaults()
 
 
   fmt.Println("content:", *contentPath)
 
-  f,_ := filepath.Glob(*contentPath+"/*.md")
-
-
-  for i, n := range f {
-
-    _, filename := filepath.Split(n)
-    title := strings.TrimSuffix(filename, filepath.Ext(filename))
-    fmt.Println(title)
-    
-    //date, err := dateStr(title)
-    //fmt.Println(date)
-    //fmt.Println(err)
-
-    fmt.Printf("%v:%v\n", i, n)
-
-    s := parseMD(n)
-
-    t, _ := template.ParseFiles("../templates/layout.html")
-    t.Parse(s)
-
-
-    d := "../_site/"+title
-    makeDir(d)
-    fmt.Println(d) 
-    index := d+"/index.html"
-    fmt.Println(index)
-    file,err := os.Create(index)
-    
-    if err != nil {
-      panic(err)
+  dirs,_ := ioutil.ReadDir(*contentPath)
+  for _,n := range dirs {
+    if n.IsDir() { //Run function that builds the posts or pages
+      fmt.Println(n.Name())
+      build(*contentPath+"/"+n.Name())
     }
-    w := bufio.NewWriter(file)
-    t.Execute(w, nil)
-    w.Flush()
   }
+
+  index()
+
+
 
 }
 
@@ -107,5 +83,63 @@ func dateStr(f string) (time.Time, error) {
   return time.Parse("2006-01-02", d)
 }
 
+func build(p string) {
+  f,_ := filepath.Glob(p+"/*.md")
+
+  for i, n := range f {
+
+    _, filename := filepath.Split(n)
+    title := strings.TrimSuffix(filename, filepath.Ext(filename))
+    fmt.Println(title)
+
+    //date, err := dateStr(title)
+    //fmt.Println(date)
+    //fmt.Println(err)
+
+    fmt.Printf("%v:%v\n", i, n)
+
+    s := parseMD(n)
+
+    t, _ := template.ParseFiles("../templates/layout.html")
+    t.Parse(s)
 
 
+    d := "../_site/"+title
+    makeDir(d)
+    fmt.Println(d) 
+    index := d+"/index.html"
+    fmt.Println(index)
+    file,err := os.Create(index)
+
+    if err != nil {
+      panic(err)
+    }
+    w := bufio.NewWriter(file)
+    t.Execute(w, nil)
+    w.Flush()
+  }
+}
+
+type TemplateData struct {
+  Moo string
+}
+
+func index() {
+
+  t, _ := template.ParseFiles("../templates/layout.html", "../content/index.html")
+  d := "../_site"
+  index := d+"/index.html"
+  fmt.Println(index)
+  file,err := os.Create(index)
+  if err != nil {
+    panic(err)
+  }
+  w := bufio.NewWriter(file)
+
+  var td TemplateData;
+  td.Moo = "YAY"
+  t.Execute(w, td)
+  w.Flush()
+
+
+}
