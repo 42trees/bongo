@@ -1,16 +1,53 @@
+<!DOCTYPE html>
 <html>
-  <head>
-    <title>My awesome blog</title>
-  </head>
+<head>
+	<meta charset="utf-8">
+	<title>Karl Cordes</title>
+	<meta name="viewport" content="width=device-width">
 
-  <body>
-    <h1>Simplicity</h1>
-    <article>
-      {{ template "content" }}
-    </article>
-  
+	<!-- Custom CSS -->
+	<link rel="stylesheet" href="/css/main.css">
+	<link href='http://fonts.googleapis.com/css?family=Libre+Baskerville:400,700,400italic' rel='stylesheet' type='text/css'>
 
-    {{.Moo}}
-    </body>
+	<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
+	ga('create', 'UA-44239010-1', 'karlcordes.com');
+	ga('send', 'pageview');
+
+	</script>
+
+</head>
+
+<body>
+
+<div class="container {{.Slug}}">
+	<header class="top">
+		<h1><a href="/">Karl Cordes</a></h1>
+
+		<nav>
+
+			<ul>
+				<li><a href="/">Home</a></li>
+				<li><a href="/cv">CV</a></li>
+				<li><a href="http://github.com/kzrl/">Github</a></li>
+				<li><a href="http://twitter.com/karl_c_cordes/">Twitter</a></li>
+			</ul>
+
+		</nav>
+
+	</header>
+
+
+	<div class="content">
+		{{ template "content" }}
+	</div>
+
+
+</div> <!-- .container -->
+
+</body>
 </html>
