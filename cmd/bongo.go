@@ -44,9 +44,6 @@ func main() {
 
   index()
 
-  frontmatter("../content/pages/cv.html")
-
-
 }
 
 
@@ -65,21 +62,6 @@ func parseMD(filename string) string {
   mdstr := strings.Join(strs, "")
 
   return mdstr
-}
-
-func parseHTML(filename string) string {
-  start := "{{define \"content\"}}\n"
-  end := "{{end}}\n"
-
-  abs,_ := filepath.Abs(filename)
-  f,_ := ioutil.ReadFile(abs)
-  s := string(f[:])
-
-  strs := []string{start, s, end}
-  mdstr := strings.Join(strs, "")
-
-  return mdstr
-
 }
 
 func makeDir(p string) error {
@@ -113,26 +95,14 @@ func parseFiles(f []string) {
 
     var td TemplateData;
 
-    td.Slug = title;
-
     //date, err := dateStr(title)
     //fmt.Println(date)
     //fmt.Println(err)
 
     fmt.Printf("%v:%v\n", i, n)
 
-    ext := filepath.Ext(n)
     s := parseMD(n)
-    if ext == ".md" {
-      //@TODO scan the file. look for frontmatter opening and closing ---
-      // if found, unmarshal the contents
-      /* err := yaml.Unmarshal([]byte(s), &td)
-      if err != nil {
-        log.Printf("error: %v", err)
-      }
-      fmt.Printf("--- td:%+v\n\n", td)*/
-
-    }
+    td,_ = frontmatter(n)
 
     t, _ := template.ParseFiles("../templates/layout.html")
     t.Parse(s)
@@ -161,25 +131,30 @@ type TemplateData struct {
   Title string
   Layout string
   Permalink string
+  Content template.HTML
 }
 
 func index() {
 
-  t, _ := template.ParseFiles("../templates/layout.html", "../content/index.html")
+  t, _ := template.ParseFiles("../templates/layout.html")
   d := "../_site"
   index := d+"/index.html"
   fmt.Println(index)
   file,err := os.Create(index)
+
   if err != nil {
     panic(err)
   }
+
   w := bufio.NewWriter(file)
 
   var td TemplateData;
+
+  td,_ = frontmatter("../content/index.html")
+
   td.Title = "Home"
   t.Execute(w, td)
   w.Flush()
-
 
 }
 
@@ -201,15 +176,17 @@ func frontmatter(f string) (TemplateData, error) {
   start, end := false, false
 
   b := []string{}
+  sb := []string{} //stripped buffer. ie. No frontmatter 
 
   for scanner.Scan() {
 
-    if start && end { //already done with FM. No need to continue
-      fmt.Printf("b: %+v\n", b)
-      break
-    }
 
     t := scanner.Text()
+
+
+    if start && end { //already done with FM. Add to stripped buffer
+      sb = append(sb, t)
+    }
 
     if t == fm {
 
@@ -226,23 +203,45 @@ func frontmatter(f string) (TemplateData, error) {
       fmt.Printf("start: %v, end: %v\n", start, end)
       fmt.Println(scanner.Text())
 
-    } else {
+    } else { //not dashes
 
-      if start {
+      if start && !end{ //are inside the FM
         b = append(b, t)
+        fmt.Println(t)
       }
+
+      if !start && !end { //No frontmatter. Just add it to the 'stripped' buffer
+        sb = append(sb, t)
+      }
+
     }
   }
-  fmt.Println(b)
 
   var td TemplateData
+
+  //Parse the actual YAML inside the front matter
   s := strings.Join(b, "\n")
   e := yaml.Unmarshal([]byte(s), &td)
   if e != nil {
-    log.Printf("error: %v", err)
+    log.Printf("YAML error: %v", err)
   }
-  fmt.Printf("--- td:%+v\n\n", td)
 
-  return td, e 
+  ext := filepath.Ext(f)
+  fmt.Println(ext)
+
+  //This works, but is a bit messy
+  if ext == ".md" {
+    s := strings.Join(sb, "\n")
+    md := blackfriday.MarkdownCommon([]byte(s))
+    s = string(md[:])
+    td.Content = template.HTML(s)
+  }
+
+  if ext == ".html" {
+    td.Content = template.HTML(strings.Join(sb, "\n")) //join the array together, convert to HTML
+  }
+
+
+  return td, e
 }
 
