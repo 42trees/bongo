@@ -31,7 +31,7 @@ func main() {
 
   //  flag.PrintDefaults()
 
-
+  startTime := time.Now()
   fmt.Println("content:", *contentPath)
 
   dirs,_ := ioutil.ReadDir(*contentPath)
@@ -44,24 +44,7 @@ func main() {
 
   index()
 
-}
-
-
-func parseMD(filename string) string {
-
-  start := "{{define \"content\"}}\n"
-  end := "{{end}}\n"
-
-  abs,_ := filepath.Abs(filename)
-  f,_ := ioutil.ReadFile(abs)
-
-  md := blackfriday.MarkdownCommon(f)
-  s := string(md[:])
-
-  strs := []string{start, s, end}
-  mdstr := strings.Join(strs, "")
-
-  return mdstr
+  fmt.Printf("Built in %v ms\n", int(1000*time.Since(startTime).Seconds()))
 }
 
 func makeDir(p string) error {
@@ -101,14 +84,17 @@ func parseFiles(f []string) {
 
     fmt.Printf("%v:%v\n", i, n)
 
-    s := parseMD(n)
     td,_ = frontmatter(n)
 
-    t, _ := template.ParseFiles("../templates/layout.html")
-    t.Parse(s)
+    if td.Slug == "" {
+      fmt.Println("autoslug is:", title)
+      td.Slug = title
+    }
 
 
-    d := "../_site/"+title
+    t, _ := template.ParseFiles("templates/layout.html")
+
+    d := "_site/"+td.Slug
     makeDir(d)
     fmt.Println(d) 
     index := d+"/index.html"
@@ -130,14 +116,13 @@ type TemplateData struct {
   Slug string
   Title string
   Layout string
-  Permalink string
   Content template.HTML
 }
 
 func index() {
 
-  t, _ := template.ParseFiles("../templates/layout.html")
-  d := "../_site"
+  t, _ := template.ParseFiles("templates/layout.html")
+  d := "_site"
   index := d+"/index.html"
   fmt.Println(index)
   file,err := os.Create(index)
@@ -150,7 +135,7 @@ func index() {
 
   var td TemplateData;
 
-  td,_ = frontmatter("../content/index.html")
+  td,_ = frontmatter("content/index.html")
 
   td.Title = "Home"
   t.Execute(w, td)
