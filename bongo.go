@@ -1,37 +1,59 @@
 package main
 
-import "fmt"
-import "path/filepath"
-import "flag"
-import "html/template"
-import "bufio"
-import "io/ioutil"
-import "strings"
-import "os"
-import "time"
-import "log"
+import (
+	"bufio"
+	"flag"
+	"fmt"
+	"html/template"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
-import "github.com/russross/blackfriday"
-import "gopkg.in/yaml.v2"
+	"github.com/russross/blackfriday"
+	"gopkg.in/yaml.v2"
+)
+
+const bongoVersion = "0.0.1"
 
 func main() {
 
 	/*
-	  usage: bongo (no params)
-	  bongo builds the site in _site/
+		  default usage: bongo - builds the site in _site/
 
-	  Make it work. Make it right. Make it fast.
-
-	  flags: -content
+			flags:
+			-content
+			-new
+			-help
+			-server
+			-version
 	*/
 	var projectDir = flag.String("new", "", "Create a new bongo project in the specified directory")
 	var contentPath = flag.String("content", "content", "Path to content")
+	var helpFlag = flag.Bool("help", false, "Show usage")
+	var versionFlag = flag.Bool("version", false, "Show version")
+	var serverFlag = flag.Bool("server", false, "Build the site and start a webserver")
+	var port = flag.String("port", "4242", "Port the webserver will listen on")
+
 	flag.Parse()
 
 	//	flag.PrintDefaults()
 
 	if *projectDir != "" {
 		newProject(*projectDir)
+		return
+	}
+
+	if *helpFlag || *versionFlag {
+		help()
+		return
+	}
+
+	if *serverFlag {
+		server(*port)
 		return
 	}
 
@@ -52,6 +74,17 @@ func main() {
 
 	fmt.Printf("Built in %v ms\n", int(1000*time.Since(startTime).Seconds()))
 
+}
+
+func help() {
+	fmt.Printf("bongo %v\n", bongoVersion)
+	flag.PrintDefaults()
+	return
+}
+
+func server(p string) {
+	fmt.Println("Listening on port", p)
+	log.Fatal(http.ListenAndServe(":"+p, http.FileServer(http.Dir("./_site/"))))
 }
 
 func newProject(d string) error {
