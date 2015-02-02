@@ -90,7 +90,6 @@ func server(p string) {
 func newProject(d string) error {
 
 	var c = filepath.Clean(d)
-	fmt.Printf("Creating %v/templates\n", c)
 	var e = makeDir(c + "/templates")
 	e = makeDir(c + "/content")
 	e = makeDir(c + "/_site")
@@ -102,6 +101,7 @@ func newProject(d string) error {
 }
 
 func makeDir(p string) error {
+	fmt.Printf("Creating %v\n", p)
 	return os.MkdirAll(p, 0755)
 }
 
