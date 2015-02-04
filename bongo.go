@@ -16,7 +16,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const bongoVersion = "0.0.1"
+const bongoVersion = "0.0.2"
 
 func Help() {
 	fmt.Printf("bongo %v\n", bongoVersion)
@@ -92,6 +92,7 @@ func parseFiles(f []string) {
 			td.Slug = title
 		}
 
+		//@TODO don't ignore these
 		t, _ := template.ParseFiles("templates/layout.html")
 
 		d := "_site/" + td.Slug
