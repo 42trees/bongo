@@ -1,4 +1,4 @@
-package main
+package bongo
 
 import (
 	"bufio"
@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,75 +18,13 @@ import (
 
 const bongoVersion = "0.0.1"
 
-func main() {
-
-	/*
-		  default usage: bongo - builds the site in _site/
-
-			flags:
-			-content
-			-new
-			-help
-			-server
-			-version
-	*/
-	var projectDir = flag.String("new", "", "Create a new bongo project in the specified directory")
-	var contentPath = flag.String("content", "content", "Path to content")
-	var helpFlag = flag.Bool("help", false, "Show usage")
-	var versionFlag = flag.Bool("version", false, "Show version")
-	var serverFlag = flag.Bool("server", false, "Build the site and start a webserver")
-	var port = flag.String("port", "4242", "Port the webserver will listen on")
-
-	flag.Parse()
-
-	//	flag.PrintDefaults()
-
-	if *projectDir != "" {
-		newProject(*projectDir)
-		return
-	}
-
-	if *helpFlag || *versionFlag {
-		help()
-		return
-	}
-
-	if *serverFlag {
-		server(*port)
-		return
-	}
-
-	startTime := time.Now()
-
-	fmt.Println("content:", *contentPath)
-	fmt.Println("content:", *contentPath)
-
-	dirs, _ := ioutil.ReadDir(*contentPath)
-	for _, n := range dirs {
-		if n.IsDir() { //Run function that builds the posts or pages
-			fmt.Println(n.Name())
-			build(*contentPath + "/" + n.Name())
-		}
-	}
-
-	index()
-
-	fmt.Printf("Built in %v ms\n", int(1000*time.Since(startTime).Seconds()))
-
-}
-
-func help() {
+func Help() {
 	fmt.Printf("bongo %v\n", bongoVersion)
 	flag.PrintDefaults()
 	return
 }
 
-func server(p string) {
-	fmt.Println("Listening on port", p)
-	log.Fatal(http.ListenAndServe(":"+p, http.FileServer(http.Dir("./_site/"))))
-}
-
-func newProject(d string) error {
+func NewProject(d string) error {
 
 	var c = filepath.Clean(d)
 	var e = makeDir(c + "/templates")
@@ -113,13 +50,23 @@ func dateStr(f string) (time.Time, error) {
 	return time.Parse("2006-01-02", d)
 }
 
-func build(p string) {
-	//@TODO check errors
-	md, _ := filepath.Glob(p + "/*.md")
-	parseFiles(md)
+func Build(c *string) {
 
-	html, _ := filepath.Glob(p + "/*.html")
-	parseFiles(html)
+	dirs, _ := ioutil.ReadDir(*c)
+	for _, n := range dirs {
+		if n.IsDir() { //Run function that builds the posts or pages
+			fmt.Println(n.Name())
+			p := *c + "/" + n.Name()
+
+			//@TODO check errors
+			md, _ := filepath.Glob(p + "/*.md")
+			parseFiles(md)
+
+			html, _ := filepath.Glob(p + "/*.html")
+			parseFiles(html)
+
+		}
+	}
 
 }
 
@@ -172,7 +119,7 @@ type TemplateData struct {
 	Content template.HTML
 }
 
-func index() {
+func Index() {
 
 	t, _ := template.ParseFiles("templates/layout.html")
 	d := "_site"
