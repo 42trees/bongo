@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"github.com/russross/blackfriday"
+	"gopkg.in/yaml.v2"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -11,9 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/russross/blackfriday"
-	"gopkg.in/yaml.v2"
 )
 
 const bongoVersion = "0.0.2"
@@ -24,25 +23,7 @@ func Help() {
 	return
 }
 
-func NewProject(d string) error {
-
-	var c = filepath.Clean(d)
-	var e = makeDir(c + "/templates")
-	e = makeDir(c + "/content")
-	e = makeDir(c + "/_site")
-	e = makeDir(c + "/scss")
-	e = makeDir(c + "/_site/js")
-	e = makeDir(c + "/_site/css")
-	return e
-
-}
-
-func makeDir(p string) error {
-	fmt.Printf("Creating %v\n", p)
-	return os.MkdirAll(p, 0755)
-}
-
-//Might skip dates in filenames. What's the point?
+//@TODO handle dates in filenames
 func dateStr(f string) (time.Time, error) {
 	s := strings.Split(f, "-")
 	fmt.Println(len(s))
@@ -52,7 +33,14 @@ func dateStr(f string) (time.Time, error) {
 
 func Build(c *string) {
 
-	dirs, _ := ioutil.ReadDir(*c)
+	startTime := time.Now()
+	dirs, err := ioutil.ReadDir(*c)
+
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
 	for _, n := range dirs {
 		if n.IsDir() { //Run function that builds the posts or pages
 			fmt.Println(n.Name())
@@ -68,6 +56,8 @@ func Build(c *string) {
 		}
 	}
 
+	Index()
+	fmt.Printf("Built in %v ms\n", int(1000*time.Since(startTime).Seconds()))
 }
 
 func parseFiles(f []string) {

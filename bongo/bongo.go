@@ -4,12 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/42trees/bongo"
-	"time"
 )
 
 func main() {
-
-	fmt.Println("bongo")
 
 	/*
 		default usage: bongo - builds the site in _site/
@@ -30,8 +27,6 @@ func main() {
 
 	flag.Parse()
 
-	flag.PrintDefaults()
-
 	if *projectDir != "" {
 		bongo.NewProject(*projectDir)
 		return
@@ -47,13 +42,6 @@ func main() {
 		return
 	}
 
-	startTime := time.Now()
-
-	fmt.Println("content:", *contentPath)
-	fmt.Println("content:", *contentPath)
 	bongo.Build(contentPath)
-	bongo.Index()
-
-	fmt.Printf("Built in %v ms\n", int(1000*time.Since(startTime).Seconds()))
 
 }
