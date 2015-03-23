@@ -1,3 +1,6 @@
+// Copyright 2015 Karl Cordes
+// See LICENSE files for details
+
 package bongo
 
 import (
@@ -9,6 +12,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,16 +35,18 @@ func dateStr(f string) (time.Time, error) {
 	return time.Parse("2006-01-02", d)
 }
 
+// Build loops through the content types and proceses them
 func Build(c *string) {
 
 	startTime := time.Now()
 	dirs, err := ioutil.ReadDir(*c)
 
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		log.Println("Content directory does not exist")
+		log.Printf("Error: %v\n", err)
 		return
 	}
-
+	var posts map[string]Page
 	for _, n := range dirs {
 		if n.IsDir() { //Run function that builds the posts or pages
 			fmt.Println(n.Name())
@@ -48,7 +54,7 @@ func Build(c *string) {
 
 			//@TODO check errors
 			md, _ := filepath.Glob(p + "/*.md")
-			parseFiles(md)
+			posts = parseFiles(md)
 
 			html, _ := filepath.Glob(p + "/*.html")
 			parseFiles(html)
@@ -56,18 +62,25 @@ func Build(c *string) {
 		}
 	}
 
-	Index()
+	Index(posts)
 	fmt.Printf("Built in %v ms\n", int(1000*time.Since(startTime).Seconds()))
 }
 
-func parseFiles(f []string) {
+// parseFiles takes an array of filenames
+// makes the directory for the page and creates index.html
+func parseFiles(f []string) map[string]Page {
+
+	var pages map[string]Page
+
+	pages = make(map[string]Page, len(f))
+
 	for i, n := range f {
 
 		_, filename := filepath.Split(n)
 		title := strings.TrimSuffix(filename, filepath.Ext(filename))
 		fmt.Println(title)
 
-		var td TemplateData
+		var p Page
 
 		//date, err := dateStr(title)
 		//fmt.Println(date)
@@ -75,17 +88,18 @@ func parseFiles(f []string) {
 
 		fmt.Printf("%v:%v\n", i, n)
 
-		td, _ = frontmatter(n)
+		p, _ = frontmatter(n)
 
-		if td.Slug == "" {
+		if p.Slug == "" {
 			fmt.Println("autoslug is:", title)
-			td.Slug = title
+			p.Slug = title
 		}
+		pages[p.Slug] = p
 
 		//@TODO don't ignore these
 		t, _ := template.ParseFiles("templates/layout.html")
 
-		d := "_site/" + td.Slug
+		d := "_site/" + p.Slug
 		makeDir(d)
 		fmt.Println(d)
 		index := d + "/index.html"
@@ -98,21 +112,30 @@ func parseFiles(f []string) {
 		}
 
 		w := bufio.NewWriter(file)
-		t.Execute(w, td)
+		t.Execute(w, p)
 		w.Flush()
 	}
+	return pages
 }
 
-type TemplateData struct {
-	Slug    string
-	Title   string
-	Layout  string
+type Page struct {
+	Slug    string // eg. my-page
+	Title   string // My page!
+	Layout  string // @TODO
 	Content template.HTML
+	Excerpt template.HTML //the excerpt of the content to show on the index page
 }
 
-func Index() {
+// Index builds the site index/home page
+func Index(pages map[string]Page) {
+	var p Page
 
-	t, _ := template.ParseFiles("templates/layout.html")
+	for key, value := range pages {
+		log.Printf("%v => %v", key, value)
+		//cb = append(cb, value.Excerpt)
+	}
+
+	t, _ := template.ParseFiles("templates/index.html")
 	d := "_site"
 	index := d + "/index.html"
 	fmt.Println(index)
@@ -124,19 +147,15 @@ func Index() {
 
 	w := bufio.NewWriter(file)
 
-	var td TemplateData
-
-	td, _ = frontmatter("content/index.html")
-
-	td.Title = "Home"
-	t.Execute(w, td)
+	p.Title = "Home"
+	t.Execute(w, p)
 	w.Flush()
 
 }
 
 // Read the file line by line and find the frontmatter
-// Return a TemplateData struct if successful
-func frontmatter(f string) (TemplateData, error) {
+// Return a Page struct if successful
+func frontmatter(f string) (Page, error) {
 
 	file, err := os.Open(f)
 	if err != nil {
@@ -150,19 +169,26 @@ func frontmatter(f string) (TemplateData, error) {
 
 	start, end := false, false
 
+	//Definitely should use a better method than this @TODO
 	b := []string{}
 	sb := []string{} //stripped buffer. ie. No frontmatter
-
+	excerpt := sb
 	for scanner.Scan() {
 
 		t := scanner.Text()
 
 		if start && end { //already done with FM. Add to stripped buffer
+
+			if t == "<!--more-->" {
+				log.Printf("Found more tag in %v\n", f)
+				excerpt = sb
+				log.Printf("excerpt length: %v\n", len(excerpt))
+			}
+
 			sb = append(sb, t)
 		}
 
 		if t == fm {
-
 			if start && end { //error state. already had frontmatter. Return an error on this file
 				fmt.Println("Invalid Frontmatter")
 			}
@@ -187,13 +213,14 @@ func frontmatter(f string) (TemplateData, error) {
 			}
 
 		}
+
 	}
 
-	var td TemplateData
+	var p Page
 
 	//Parse the actual YAML inside the front matter
 	s := strings.Join(b, "\n")
-	e := yaml.Unmarshal([]byte(s), &td)
+	e := yaml.Unmarshal([]byte(s), &p)
 	if e != nil {
 		log.Printf("YAML error: %v", err)
 	}
@@ -206,12 +233,26 @@ func frontmatter(f string) (TemplateData, error) {
 		s := strings.Join(sb, "\n")
 		md := blackfriday.MarkdownCommon([]byte(s))
 		s = string(md[:])
-		td.Content = template.HTML(s)
+		p.Content = template.HTML(s)
+
+		if len(excerpt) > 0 {
+			s = strings.Join(excerpt, "\n")
+			md = blackfriday.MarkdownCommon([]byte(s))
+			s = string(md[:])
+			p.Excerpt = template.HTML(s)
+
+			log.Printf("EX PAGE: %+v\n", p)
+		}
 	}
 
 	if ext == ".html" {
-		td.Content = template.HTML(strings.Join(sb, "\n")) //join the array together, convert to HTML
+		p.Content = template.HTML(strings.Join(sb, "\n")) //join the array together, convert to HTML
 	}
 
-	return td, e
+	return p, e
+}
+
+func Server(p string) {
+	fmt.Println("Listening on port", p)
+	log.Fatal(http.ListenAndServe(":"+p, http.FileServer(http.Dir("./_site/"))))
 }

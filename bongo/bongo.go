@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/42trees/bongo"
 )
 
@@ -38,6 +37,7 @@ func main() {
 	}
 
 	if *serverFlag {
+		bongo.Build(contentPath)
 		bongo.Server(*port)
 		return
 	}
